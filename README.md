@@ -1,0 +1,2 @@
+# CubeFS vscode
+

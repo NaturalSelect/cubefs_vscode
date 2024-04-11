@@ -1,0 +1,258 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "inputs": [
+        {
+            "id": "profileName",
+            "default": "./profile.out",
+            "type": "promptString",
+            "description": "profile name"
+        },
+        {
+            "id": "profileSeconds",
+            "default": "30",
+            "type": "promptString",
+            "description": "profile seconds"
+        },
+        {
+            "id": "dockerId",
+            "default": "",
+            "type": "promptString",
+            "description": "docker container id"
+        },
+        {
+            "id": "metanodeId",
+            "default": "1",
+            "type": "promptString",
+            "description": "metanode id"
+        },
+        {
+            "id": "datanodeId",
+            "default": "1",
+            "type": "promptString",
+            "description": "datanode id"
+        },
+        {
+            "id": "masterId",
+            "default": "1",
+            "type": "promptString",
+            "description": "master id"
+        },
+        {
+            "id": "searchGrep",
+            "default": "",
+            "type": "promptString",
+            "description": "search word for grep"
+        },
+        {
+            "id": "volumeName",
+            "default": "ltptest",
+            "type": "promptString",
+            "description": "volume name"
+        }
+    ],
+    "tasks": [
+        {
+            "label": "Cfs:download client profile",
+            "type": "shell",
+            "command": [
+                "docker exec $(docker ps | grep client | awk '{print $1}') curl -o /tmp/cfs-profile http://localhost:17410/debug/pprof/profile?seconds=${input:profileSeconds} ; ",
+                "docker cp $(docker ps | grep client | awk '{print $1}'):/tmp/cfs-profile ${input:profileName}"
+            ]
+        },
+        {
+            "label": "Cfs:download metanode profile",
+            "type": "shell",
+            "command": [
+                "docker exec ${input:dockerId} curl -o /tmp/cfs-profile http://localhost:17220/debug/pprof/profile?seconds=${input:profileSeconds} ; ",
+                "docker cp ${input:dockerId}:/tmp/cfs-profile ${input:profileName}"
+            ]
+        },
+        {
+            "label": "Cfs:download datanode profile",
+            "type": "shell",
+            "command": [
+                "docker exec ${input:dockerId} curl -o /tmp/cfs-profile http://localhost:17320/debug/pprof/profile?seconds=${input:profileSeconds} ; ",
+                "docker cp ${input:dockerId}:/tmp/cfs-profile ${input:profileName}"
+            ]
+        },
+        {
+            "label": "Cfs:download master profile",
+            "type": "shell",
+            "command": [
+                "docker exec ${input:dockerId} curl -o /tmp/cfs-profile http://localhost:17020/debug/pprof/profile?seconds=${input:profileSeconds} ; ",
+                "docker cp ${input:dockerId}:/tmp/cfs-profile ${input:profileName}"
+            ]
+        },
+        {
+            "label": "Cfs:start servers",
+            "type": "shell",
+            "command": [
+                "docker/run_docker.sh --clean ; ",
+                "docker/run_docker.sh --server"
+            ]
+        },
+        {
+            "label": "Cfs:clean up",
+            "type": "shell",
+            "command": [
+                "docker/run_docker.sh --clean ; ",
+                "rm -rf docker/docker_data/*"
+            ]
+        },
+        {
+            "label": "Cfs:build non-stop",
+            "type": "shell",
+            "command": [
+                "docker/run_docker.sh --build"
+            ]
+        },
+        {
+            "label": "Cfs:enter client",
+            "type": "shell",
+            "command": [
+                "docker exec -it $(docker ps | grep client | awk '{print $1}') bash"
+            ]
+        },
+        {
+            "label": "Cfs:rebuild and restart server",
+            "type": "shell",
+            "command": [
+                "docker/run_docker.sh --clean ; ",
+                "docker/run_docker.sh --build ; ",
+                "docker/run_docker.sh --server"
+            ]
+        },
+        {
+            "label": "Cfs:search metanode logs",
+            "type": "shell",
+            "command": [
+                "echo [Debug] ; ",
+                "(cat docker/docker_data/metanode${input:metanodeId}/log/metaNode/metaNode_debug.log | grep \"${input:searchGrep}\") ; ",
+                "(echo [Info]) ; ",
+                "(cat docker/docker_data/metanode${input:metanodeId}/log/metaNode/metaNode_info.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Warn] ; ",
+                "(cat docker/docker_data/metanode${input:metanodeId}/log/metaNode/metaNode_warn.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Error] ; ",
+                "(cat docker/docker_data/metanode${input:metanodeId}/log/metaNode/metaNode_error.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Critical] ; ",
+                "(cat docker/docker_data/metanode${input:metanodeId}/log/metaNode/metaNode_critical.log | grep \"${input:searchGrep}\")"
+            ]
+        },
+        {
+            "label": "Cfs:search datanode logs",
+            "type": "shell",
+            "command": [
+                "echo [Debug] ; ",
+                "(cat docker/docker_data/datanode${input:datanodeId}/log/dataNode/dataNode_debug.log | grep \"${input:searchGrep}\") ; ",
+                "(echo [Info]) ; ",
+                "(cat docker/docker_data/datanode${input:datanodeId}/log/dataNode/dataNode_info.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Warn] ; ",
+                "(cat docker/docker_data/datanode${input:datanodeId}/log/dataNode/dataNode_warn.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Error] ; ",
+                "(cat docker/docker_data/datanode${input:datanodeId}/log/dataNode/dataNode_error.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Critical] ; ",
+                "(cat docker/docker_data/datanode${input:datanodeId}/log/dataNode/dataNode_critical.log | grep \"${input:searchGrep}\")"
+            ]
+        },
+        {
+            "label": "Cfs:search master logs",
+            "type": "shell",
+            "command": [
+                "echo [Debug] ; ",
+                "(cat docker/docker_data/master${input:masterId}/log/master/master_debug.log | grep \"${input:searchGrep}\") ; ",
+                "(echo [Info]) ; ",
+                "(cat docker/docker_data/master${input:masterId}/log/master/master_info.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Warn] ; ",
+                "(cat docker/docker_data/master${input:masterId}/log/master/master_warn.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Error] ; ",
+                "(cat docker/docker_data/master${input:masterId}/log/master/master_error.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Critical] ; ",
+                "(cat docker/docker_data/master${input:masterId}/log/master/master_critical.log | grep \"${input:searchGrep}\")"
+            ]
+        },
+        {
+            "label": "Cfs:search metanode audit logs",
+            "type": "shell",
+            "command": [
+                "echo [Metanode 1] ; ",
+                "(cat docker/docker_data/metanode1/log/metaNode/audit.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Metanode 2] ; ",
+                "(cat docker/docker_data/metanode2/log/metaNode/audit.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Metanode 3] ; ",
+                "(cat docker/docker_data/metanode3/log/metaNode/audit.log | grep \"${input:searchGrep}\") ; ",
+                "echo [Metanode 4] ; ",
+                "(cat docker/docker_data/metanode4/log/metaNode/audit.log | grep \"${input:searchGrep}\")"
+            ]
+        },
+        {
+            "label": "Cfs:build",
+            "type": "shell",
+            "command": [
+                "docker/run_docker.sh --build ; ",
+                "docker/run_docker.sh --clean"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Cfs:show used disk space",
+            "type": "shell",
+            "command": [
+                "du -sh docker/docker_data"
+            ]
+        },
+        {
+            "label": "Cfs:show metanode used disk space",
+            "type": "shell",
+            "command": [
+                "du -sh docker/docker_data/metanode*"
+            ]
+        },
+        {
+            "label": "Cfs:show datanode used disk space",
+            "type": "shell",
+            "command": [
+                "du -sh docker/docker_data/datanode*"
+            ]
+        },
+        {
+            "label": "Cfs:show volume metapartition info",
+            "type": "shell",
+            "command": [
+                "docker exec -it $(docker ps | grep client | awk '{print $1}') /cfs/bin/cfs-cli vol info ${input:volumeName} -m"
+            ]
+        },
+        {
+            "label": "Cfs:show volume datapartition info",
+            "type": "shell",
+            "command": [
+                "docker exec -it $(docker ps | grep client | awk '{print $1}') /cfs/bin/cfs-cli vol info ${input:volumeName} -d"
+            ]
+        },
+        {
+            "label": "Cfs:run unit tests",
+            "type": "shell",
+            "command": [
+                "docker/run_docker.sh --test ; ",
+                "docker/run_docker.sh --clean"
+            ]
+        },
+        {
+            "label": "Cfs:shutdown",
+            "type": "shell",
+            "command": [
+                "docker/run_docker.sh --clean"
+            ]
+        },
+        {
+            "label": "Cfs:run s3 test",
+            "type": "shell",
+            "command":[
+                "rm -rf docker/docker_data/* ; ",
+                "docker/run_docker.sh --s3test ; ",
+                "docker/run_docker.sh --clean"
+            ]
+        }
+    ]
+}
