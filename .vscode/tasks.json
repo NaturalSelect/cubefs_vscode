@@ -253,12 +253,25 @@
                 "docker/run_docker.sh --s3test ; ",
                 "docker/run_docker.sh --clean"
             ]
-        }，
+        },
         {
             "label": "Cfs:set unpribileged port",
             "type": "shell",
             "command":[
                 "sudo sysctl net.ipv4.ip_unprivileged_port_start=80"
+            ]
+        },
+        {
+            "label": "Cfs:config debian source",
+            "type": "shell",
+            "command":[
+                "mkdir -p /tmp/cfs ; ",
+                "echo \"deb https://mirrors.aliyun.com/debian/ bullseye main non-free contrib\" > /tmp/cfs/tmp.list ; ",
+                "echo \"deb https://mirrors.aliyun.com/debian-security/ bullseye-security main\" >> /tmp/cfs/tmp.list ; ",
+                "echo \"deb https://mirrors.aliyun.com/debian/ bullseye-updates main non-free contrib\" >> /tmp/cfs/tmp.list ; ",
+                "echo \"deb https://mirrors.aliyun.com/debian/ bullseye-backports main non-free contrib\" >> /tmp/cfs/tmp.list ; ",
+                "docker cp /tmp/cfs/tmp.list $(docker ps | grep client | awk '{print $1}'):/etc/apt/sources.list ; ",
+                "rm /tmp/cfs/tmp.list"
             ]
         }
     ]
